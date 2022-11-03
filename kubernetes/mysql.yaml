@@ -42,6 +42,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: wordpress-mysql
+  namespace: code-challenge
   labels:
     app: wp-blog
 spec:
@@ -76,6 +77,11 @@ spec:
             port: 3306
           initialDelaySeconds: 30
           periodSeconds: 5
+        livenessProbe:
+          tcpSocket:
+            port: 3306
+          initialDelaySeconds: 15
+          periodSeconds: 20
         volumeMounts:
         - name: mysql-persistent-storage
           mountPath: /var/lib/mysql

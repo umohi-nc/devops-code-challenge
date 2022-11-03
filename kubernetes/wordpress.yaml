@@ -8,6 +8,7 @@ metadata:
 spec:
   ports:
     - port: 80
+      targetPort: 80
   selector:
     app: wp-blog
     tier: frontend
@@ -27,9 +28,56 @@ spec:
     requests:
       storage: 20Gi
 ---
-# TODO: complete the wordpress deployment
-#apiVersion: apps/v1
-#kind: Deployment
-#metadata:
-#  name: wordpress
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress
+  namespace: code-challenge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wp-blog
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: wp-blog
+        tier: frontend
+    spec:
+      containers:
+        - image: wordpress
+          name: wordpress
+          volumeMounts:
+            - mountPath: /var/www/html
+              name: wordpress-persistent-storage
+          ports:
+          - containerPort: 80
+            name: wordpress
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          env:
+          - name: WORDPRESS_DB_HOST
+            value: wordpress-mysql
+          - name: WORDPRESS_DB_NAME
+            value: wordpress
+          - name: WORDPRESS_DB_USER
+            value: root
+          - name: WORDPRESS_DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: wordpress-db-pass
+                key: password
 
+      volumes:
+      - name: wordpress-persistent-storage
+        persistentVolumeClaim:
+          claimName: wp-pv-claim
