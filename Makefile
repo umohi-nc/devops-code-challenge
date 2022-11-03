@@ -1,4 +1,5 @@
 .PHONY: container dev-env deploy help test test-1-version test-2-health test-3-curl test-4-probes todo
+KUBECTL := minikube kubectl --
 
 default: help
 
@@ -14,9 +15,9 @@ dev-env: ## launch the dev container and mount the current KUBECONFIG
 		wheniwork/devops-code-challenge -- bash
 
 deploy: ## apply kubernetes resources using the current KUBECONFIG
-	kubectl apply -f kubernetes/namespace.yaml
-	kubectl apply -f kubernetes/mysql.yaml
-	kubectl apply -f kubernetes/wordpress.yaml
+	${KUBECTL} apply -f kubernetes/namespace.yaml
+	${KUBECTL} apply -f kubernetes/mysql.yaml
+	${KUBECTL} apply -f kubernetes/wordpress.yaml
 
 # test targets
 
@@ -25,7 +26,7 @@ test: test-1-version test-2-health test-3-curl test-4-probes test-5-endpoints
 
 test-1-version: ## run kubernetes version test
 	@echo "running kubernetes version test"
-	if kubectl version -o=json | grep minor | tr -d ' ' | grep -qve '"minor":"[2-9][1-9]",'; \
+	if ${KUBECTL} version -o=json | grep minor | tr -d ' ' | grep -qve '"minor":"[2-9][1-9]",'; \
 	then \
 		echo "version test failed!"; \
 		exit 1; \
@@ -35,7 +36,7 @@ test-1-version: ## run kubernetes version test
 
 test-2-health: ## run pod health test
 	@echo "running pod health test"
-	if kubectl -n code-challenge get pods -o=jsonpath='{.items[*].status.phase}' | grep -qvx Running; \
+	if ${KUBECTL} -n code-challenge get pods -o=jsonpath='{.items[*].status.phase}' | grep -qvx Running; \
 	then \
 		echo "health test passed"; \
 	else \
@@ -56,9 +57,9 @@ test-3-curl: ## run curl request test
 test-4-probes: ## run pod probe test
 	@echo "running probe test"
 	( \
-		export IMAGE_COUNT="$(shell kubectl -n code-challenge get pods -o=jsonpath='{range .items[*].spec.containers[*].image}{.}{"\n"}{end}' | wc -l | tr -d ' ')"; \
-		export LIVENESS_COUNT="$(shell kubectl -n code-challenge get pods -o=jsonpath='{range .items[*].spec.containers[*].livenessProbe}{.}{"\n"}{end}' | wc -l | tr -d ' ')"; \
-		export READINESS_COUNT="$(shell kubectl -n code-challenge get pods -o=jsonpath='{range .items[*].spec.containers[*].readinessProbe}{.}{"\n"}{end}' | wc -l | tr -d ' ')"; \
+		export IMAGE_COUNT="$(shell ${KUBECTL} -n code-challenge get pods -o=jsonpath='{range .items[*].spec.containers[*].image}{.}{"\n"}{end}' | wc -l | tr -d ' ')"; \
+		export LIVENESS_COUNT="$(shell ${KUBECTL} -n code-challenge get pods -o=jsonpath='{range .items[*].spec.containers[*].livenessProbe}{.}{"\n"}{end}' | wc -l | tr -d ' ')"; \
+		export READINESS_COUNT="$(shell ${KUBECTL} -n code-challenge get pods -o=jsonpath='{range .items[*].spec.containers[*].readinessProbe}{.}{"\n"}{end}' | wc -l | tr -d ' ')"; \
 		if [ $$IMAGE_COUNT -ne $$LIVENESS_COUNT ]; then echo "failed liveness probe test!"; exit 1; fi; \
 		if [ $$IMAGE_COUNT -ne $$READINESS_COUNT ]; then echo "failed readiness probe test!"; exit 1; fi; \
 		echo "probe test passed"; \
@@ -66,7 +67,7 @@ test-4-probes: ## run pod probe test
 
 test-5-endpoints:
 	@echo "running endpoint test"
-	if kubectl -n code-challenge describe svc | grep Endpoints | grep -q '<none>'; \
+	if ${KUBECTL} -n code-challenge describe svc | grep Endpoints | grep -q '<none>'; \
 	then \
 		echo "service endpoint test failed!"; \
 		exit 1; \
